@@ -36,7 +36,7 @@ def step_enter_api_key():
         if api_key_input.strip():
             st.session_state.api_key = api_key_input.strip()
             st.session_state.step = 1
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.warning("API key cannot be empty. Please enter a valid key.")
 
@@ -61,7 +61,7 @@ def step_personal_info():
         if 'verification_done' in st.session_state:
             del st.session_state['verification_done']
         st.session_state.step = 2
-        st.experimental_rerun()
+        st.rerun()
 
 # ----------------------
 # Step 2: Upload Document
@@ -82,7 +82,7 @@ def step_upload_document():
             if 'verification_done' in st.session_state:
                 del st.session_state['verification_done']
             st.session_state.step = 1
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button("Continue"):
             st.session_state.user_data['document_type'] = doc_type
@@ -91,7 +91,7 @@ def step_upload_document():
                 if 'verification_done' in st.session_state:
                     del st.session_state['verification_done']
                 st.session_state.step = 3
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning("Please upload a document.")
 
@@ -119,14 +119,14 @@ def step_face_capture():
             if 'verification_done' in st.session_state:
                 del st.session_state['verification_done']
             st.session_state.step = 2
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button("Continue"):
             if 'selfie' in st.session_state.user_data:
                 if 'verification_done' in st.session_state:
                     del st.session_state['verification_done']
                 st.session_state.step = 4
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning("Please capture a selfie before continuing.")
 
@@ -162,7 +162,7 @@ def step_verifying():
             st.session_state.verification_passed = False
             st.session_state.step = 7
 
-        st.experimental_rerun()
+        st.rerun()
     else:
         st.write("Verification complete, redirecting...")
 
@@ -183,7 +183,7 @@ def step_address_proof_required():
                 del st.session_state['verification_done']
             st.session_state.step = 1
             st.session_state.user_data = {}
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button("Submit Proof"):
             if uploaded_proof is not None:
@@ -191,7 +191,7 @@ def step_address_proof_required():
                 if 'verification_done' in st.session_state:
                     del st.session_state['verification_done']
                 st.session_state.step = 6
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning("Please upload proof of address.")
 
@@ -262,7 +262,7 @@ Verification Outcome: {verification_status}
             del st.session_state['verification_done']
         st.session_state.step = 1
         st.session_state.user_data = {}
-        st.experimental_rerun()
+        st.rerun()
 
 # -------------------
 # Step 7: Verification Failed
@@ -278,14 +278,14 @@ def step_verification_failed():
             if 'verification_done' in st.session_state:
                 del st.session_state['verification_done']
             st.session_state.step = 3
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button("Start Over"):
             if 'verification_done' in st.session_state:
                 del st.session_state['verification_done']
             st.session_state.step = 1
             st.session_state.user_data = {}
-            st.experimental_rerun()
+            st.rerun()
 
 # -------------------
 # Main router
