@@ -1,7 +1,8 @@
 streamlit
 fpdf
-face_recognition
 numpy
 Pillow
-cmake
-dlib
+
+# Use forked face_recognition with precompiled dlib
+face_recognition @ git+https://github.com/thetoby9944/face_recognition
+dlib-bin
