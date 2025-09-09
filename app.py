@@ -1,130 +1,118 @@
 import streamlit as st
 from deepface import DeepFace
-import tempfile
+from PIL import Image
+import numpy as np
 
-# Initialize session state
-if 'step' not in st.session_state:
+# Session state to store user data between steps
+if "step" not in st.session_state:
     st.session_state.step = 1
-if 'user_data' not in st.session_state:
+if "user_data" not in st.session_state:
     st.session_state.user_data = {}
 
 def step_personal_info():
-    st.title("Step 1 of 6: Personal Information")
-    full_name = st.text_input("Full Name:")
-    dob = st.text_input("DOB (dd-mm-yyyy):")
-    id_number = st.text_input("ID Number:")
-    address = st.text_input("Address:")
+    st.header("Step 1 of 6: Personal Information")
+    full_name = st.text_input("Full Name", value=st.session_state.user_data.get("full_name", ""))
+    dob = st.text_input("DOB (dd-mm-yyyy)", value=st.session_state.user_data.get("dob", ""))
+    id_number = st.text_input("ID Number", value=st.session_state.user_data.get("id_number", ""))
+    address = st.text_input("Address", value=st.session_state.user_data.get("address", ""))
 
     if st.button("Continue"):
         st.session_state.user_data.update({
-            'full_name': full_name,
-            'dob': dob,
-            'id_number': id_number,
-            'address': address,
+            "full_name": full_name,
+            "dob": dob,
+            "id_number": id_number,
+            "address": address
         })
         st.session_state.step = 2
 
 def step_upload_document():
-    st.title("Step 2 of 6: Upload ID Document")
-    doc_type = st.radio("Document Type:", ['Driver\'s License', 'Passport', 'National ID'])
-    upload = st.file_uploader("Upload your ID Document (image/pdf)", type=['png','jpg','jpeg','webp','pdf'])
+    st.header("Step 2 of 6: Upload ID Document")
+    doc_type = st.radio("Document Type", ["Driver's License", "Passport", "National ID"])
+    uploaded_doc = st.file_uploader("Upload your ID document", type=["png", "jpg", "jpeg", "pdf"])
 
     if st.button("Back"):
         st.session_state.step = 1
     if st.button("Continue"):
-        st.session_state.user_data['document_type'] = doc_type
-        st.session_state.user_data['document_file'] = upload
+        st.session_state.user_data.update({
+            "document_type": doc_type,
+            "document_file": uploaded_doc
+        })
         st.session_state.step = 3
 
-def step_face_capture_deepface():
-    st.title("Step 3 of 6: Face Capture and Verification")
+def step_face_capture():
+    st.header("Step 3 of 6: Face Capture")
+    uploaded_selfie = st.file_uploader("Upload a clear selfie", type=["png", "jpg", "jpeg"])
+    
+    if st.button("Back"):
+        st.session_state.step = 2
 
-    id_file = st.file_uploader("Upload your ID Document Photo (image only)", type=["jpg", "jpeg", "png"], key="id_upload")
-    selfie_file = st.file_uploader("Upload your Selfie", type=["jpg", "jpeg", "png"], key="selfie_upload")
+    if uploaded_selfie:
+        img = Image.open(uploaded_selfie)
+        st.image(img, caption="Your selfie", use_column_width=True)
 
-    face_match_result = None
-    error_message = None
-
-    if id_file and selfie_file:
-        try:
-            # Save uploaded images temporarily to disk for DeepFace
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as id_tmp:
-                id_tmp.write(id_file.read())
-                id_path = id_tmp.name
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as selfie_tmp:
-                selfie_tmp.write(selfie_file.read())
-                selfie_path = selfie_tmp.name
-
-            # Run verification
-            result = DeepFace.verify(id_path, selfie_path, enforce_detection=True)
-
-            if result["verified"]:
-                face_match_result = "✅ Face matches! Verification passed."
-                st.session_state.user_data['face_match_passed'] = True
-            else:
-                face_match_result = "❌ Face does not match. Verification failed."
-                st.session_state.user_data['face_match_passed'] = False
-
-        except Exception as e:
-            error_message = f"Error processing images: {e}"
-
-    if error_message:
-        st.error(error_message)
-
-    if face_match_result:
-        if st.session_state.user_data.get('face_match_passed'):
-            st.success(face_match_result)
-        else:
-            st.error(face_match_result)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Back"):
-            st.session_state.step = 2
-    with col2:
-        if st.button("Continue"):
-            if st.session_state.user_data.get('face_match_passed'):
+        if st.button("Verify Face"):
+            img_array = np.array(img.convert('RGB'))
+            try:
+                # Simple face analysis with DeepFace to verify face is detected
+                result = DeepFace.analyze(img_array, actions=['age', 'gender', 'emotion'], enforce_detection=True)
+                st.success(f"Face verified! Age: {result['age']}, Gender: {result['gender']}")
+                st.session_state.user_data["selfie"] = uploaded_selfie
                 st.session_state.step = 4
-            else:
-                st.error("You must have a successful face match to continue.")
+            except Exception as e:
+                st.error(f"Face verification failed: {e}")
 
 def step_verifying():
-    st.title("Step 4 of 6: Verifying Your Identity...")
-    st.write("Please wait, this may take a few seconds...")
-
-    # Simulate processing delay
+    st.header("Step 4 of 6: Verifying Your Identity")
+    st.write("Please wait while we verify your identity...")
+    # You can simulate some processing delay
     import time
     time.sleep(2)
 
-    # For demo, skip address proof step and move to success
-    st.session_state.step = 6
+    # For demo, let's assume address extraction fails if empty
+    if not st.session_state.user_data.get("address"):
+        st.session_state.step = 5
+    else:
+        st.session_state.step = 6
+
+def step_address_proof_required():
+    st.header("Step 5 of 6: Upload Proof of Address")
+    uploaded_proof = st.file_uploader("Upload proof of address", type=["png", "jpg", "jpeg", "pdf"])
+
+    if st.button("Back"):
+        st.session_state.step = 1
+
+    if uploaded_proof and st.button("Submit Proof"):
+        st.session_state.user_data["address_proof"] = uploaded_proof
+        st.session_state.step = 6
 
 def step_verification_result():
-    st.title("Step 6 of 6: Verification Result")
+    st.header("Step 6 of 6: Verification Result")
 
     st.success("✅ Verification Successful!")
-    st.write("""
+    st.markdown("""
     **Verification Details:**
     - Name Match: ✅ Passed  
     - Date of Birth Match: ✅ Passed  
     - ID Number Match: ✅ Passed  
     - Address Match: ✅ Passed  
     - Face Match: ✅ Passed  
-    - Document Authenticity: ✅ Passed
+    - Document Authenticity: ✅ Passed  
     """)
 
     if st.button("Start Over"):
-        st.session_state.clear()
         st.session_state.step = 1
+        st.session_state.user_data = {}
 
-# Main control flow
+# Main flow controller
 if st.session_state.step == 1:
     step_personal_info()
 elif st.session_state.step == 2:
     step_upload_document()
 elif st.session_state.step == 3:
-    step_face_capture_deepface()
+    step_face_capture()
 elif st.session_state.step == 4:
     step_verifying()
+elif st.session_state.step == 5:
+    step_address_proof_required()
 elif st.session_state.step == 6:
     step_verification_result()
