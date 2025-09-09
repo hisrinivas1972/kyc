@@ -35,21 +35,17 @@ def step_personal_info():
             'id_number': id_number,
             'address': address
         })
-        # Reset verification_done flag on going forward from step 1
         st.session_state.pop('verification_done', None)
-        previous_step = st.session_state.step
         st.session_state.step = 2
-        if st.session_state.step != previous_step:
-            st.experimental_rerun()
+        st.experimental_rerun()
 
 # Step 2: Upload Document
 def step_upload_document():
     st.header("Step 2 of 6: Upload ID Document")
 
-    doc_type = st.radio("Document Type:", ['Driver\'s License', 'Passport', 'National ID'],
-                        index=['Driver\'s License', 'Passport', 'National ID'].index(
-                            st.session_state.user_data.get('document_type', 'Driver\'s License')
-                        ))
+    doc_types = ['Driver\'s License', 'Passport', 'National ID']
+    current_doc = st.session_state.user_data.get('document_type', 'Driver\'s License')
+    doc_type = st.radio("Document Type:", doc_types, index=doc_types.index(current_doc))
 
     uploaded_file = st.file_uploader("Upload Document (png, jpg, jpeg, pdf):", 
                                      type=['png', 'jpg', 'jpeg', 'pdf'])
@@ -58,20 +54,16 @@ def step_upload_document():
     with col1:
         if st.button("Back"):
             st.session_state.pop('verification_done', None)
-            previous_step = st.session_state.step
             st.session_state.step = 1
-            if st.session_state.step != previous_step:
-                st.experimental_rerun()
+            st.experimental_rerun()
     with col2:
         if st.button("Continue"):
-            st.session_state.user_data['document_type'] = doc_type
             if uploaded_file is not None:
+                st.session_state.user_data['document_type'] = doc_type
                 st.session_state.user_data['document_file'] = uploaded_file.getvalue()
                 st.session_state.pop('verification_done', None)
-                previous_step = st.session_state.step
                 st.session_state.step = 3
-                if st.session_state.step != previous_step:
-                    st.experimental_rerun()
+                st.experimental_rerun()
             else:
                 st.warning("Please upload a document.")
 
@@ -95,18 +87,14 @@ def step_face_capture():
     with col1:
         if st.button("Back"):
             st.session_state.pop('verification_done', None)
-            previous_step = st.session_state.step
             st.session_state.step = 2
-            if st.session_state.step != previous_step:
-                st.experimental_rerun()
+            st.experimental_rerun()
     with col2:
         if st.button("Continue"):
             if 'selfie' in st.session_state.user_data:
                 st.session_state.pop('verification_done', None)
-                previous_step = st.session_state.step
                 st.session_state.step = 4
-                if st.session_state.step != previous_step:
-                    st.experimental_rerun()
+                st.experimental_rerun()
             else:
                 st.warning("Please capture a selfie before continuing.")
 
@@ -116,28 +104,26 @@ def step_verifying():
     st.write("Please wait, this may take a few seconds...")
 
     if 'verification_done' not in st.session_state:
-        time.sleep(2)
+        time.sleep(2)  # Simulated verification delay
 
         face_match_score = st.session_state.user_data.get('face_match_score', 0)
         st.session_state['verification_done'] = True
 
-        previous_step = st.session_state.step
-
-        # Determine verification outcome and next step
         if face_match_score >= 75:
             if not st.session_state.user_data.get('address'):
-                st.session_state.verification_passed = False
-                st.session_state.step = 5
+                new_step = 5
             else:
-                st.session_state.verification_passed = True
-                st.session_state.step = 6
+                new_step = 6
+            passed = True
         else:
-            st.session_state.verification_passed = False
-            st.session_state.step = 7
+            new_step = 7
+            passed = False
 
-        if st.session_state.step != previous_step:
+        st.session_state.verification_passed = passed
+
+        if st.session_state.step != new_step:
+            st.session_state.step = new_step
             st.experimental_rerun()
-
     else:
         st.write("Verification complete, redirecting...")
 
@@ -153,20 +139,16 @@ def step_address_proof_required():
     with col1:
         if st.button("Start Over"):
             st.session_state.pop('verification_done', None)
-            previous_step = st.session_state.step
             st.session_state.step = 1
             st.session_state.user_data = {}
-            if st.session_state.step != previous_step:
-                st.experimental_rerun()
+            st.experimental_rerun()
     with col2:
         if st.button("Submit Proof"):
             if uploaded_proof is not None:
                 st.session_state.user_data['address_proof'] = uploaded_proof.getvalue()
                 st.session_state.pop('verification_done', None)
-                previous_step = st.session_state.step
                 st.session_state.step = 6
-                if st.session_state.step != previous_step:
-                    st.experimental_rerun()
+                st.experimental_rerun()
             else:
                 st.warning("Please upload proof of address.")
 
@@ -232,11 +214,9 @@ Verification Outcome: {verification_status}
 
     if st.button("Start Over"):
         st.session_state.pop('verification_done', None)
-        previous_step = st.session_state.step
         st.session_state.step = 1
         st.session_state.user_data = {}
-        if st.session_state.step != previous_step:
-            st.experimental_rerun()
+        st.experimental_rerun()
 
 # Step 7: Verification Failed due to Face Match Score
 def step_verification_failed():
@@ -248,22 +228,18 @@ def step_verification_failed():
     with col1:
         if st.button("Try Again"):
             st.session_state.pop('verification_done', None)
-            previous_step = st.session_state.step
             st.session_state.step = 3
-            if st.session_state.step != previous_step:
-                st.experimental_rerun()
+            st.experimental_rerun()
     with col2:
         if st.button("Start Over"):
             st.session_state.pop('verification_done', None)
-            previous_step = st.session_state.step
             st.session_state.step = 1
             st.session_state.user_data = {}
-            if st.session_state.step != previous_step:
-                st.experimental_rerun()
+            st.experimental_rerun()
 
 # Main router
 def main():
-    # Debug info for current step - remove or comment out in production
+    # Debug info for current step - remove in production if desired
     st.write(f"--- DEBUG: Current step = {st.session_state.step} ---")
 
     step = st.session_state.step
