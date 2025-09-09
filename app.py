@@ -1,6 +1,7 @@
 import streamlit as st
 from PIL import Image
 import io
+import time
 
 # Initialize session state variables
 if 'step' not in st.session_state:
@@ -43,10 +44,9 @@ def step_upload_document():
         st.session_state.user_data['document_type'] = doc_type
         if uploaded_file is not None:
             st.session_state.user_data['document_file'] = uploaded_file.getvalue()
+            st.session_state.step = 3
         else:
             st.warning("Please upload a document.")
-            return
-        st.session_state.step = 3
 
 def step_face_capture():
     st.header("Step 3 of 6: Face Capture")
@@ -59,7 +59,7 @@ def step_face_capture():
     if selfie is not None:
         st.session_state.user_data['selfie'] = selfie.getvalue()
 
-    # Add a slider to simulate face match percentage
+    # Simulated face match score
     face_match_score = st.slider("Simulated Face Match Score (%)", 0, 100, 
                                  st.session_state.user_data.get('face_match_score', 80))
     st.session_state.user_data['face_match_score'] = face_match_score
@@ -69,10 +69,8 @@ def step_face_capture():
 
     if st.button("Continue"):
         if 'selfie' in st.session_state.user_data:
-            if face_match_score >= 75:
-                st.session_state.step = 4
-            else:
-                st.warning("Face match below 75%. Verification failed.")
+            st.session_state.step = 4
+            st.experimental_rerun()
         else:
             st.warning("Please capture a selfie before continuing.")
 
@@ -80,24 +78,20 @@ def step_verifying():
     st.header("Step 4 of 6: Verifying Your Identity...")
     st.write("Please wait, this may take a few seconds...")
 
-    import time
-    time.sleep(2)  # Simulate processing time
+    time.sleep(2)  # Simulate processing
 
-    # Use simulated face match score
     face_match_score = st.session_state.user_data.get('face_match_score', 0)
-
     st.write(f"Simulated Face match score: {face_match_score}%")
 
     if face_match_score >= 75:
-        # If address missing, go to step 5 else success
         if not st.session_state.user_data.get('address'):
             st.session_state.step = 5
         else:
             st.session_state.step = 6
     else:
-        st.error("Face match below 75%. Verification failed.")
-        if st.button("Try Again"):
-            st.session_state.step = 3
+        st.session_state.step = 7  # Failed step
+
+    st.experimental_rerun()
 
 def step_address_proof_required():
     st.header("Step 5 of 6: Proof of Address Required")
@@ -108,16 +102,18 @@ def step_address_proof_required():
     if st.button("Start Over"):
         st.session_state.step = 1
         st.session_state.user_data = {}
+        st.experimental_rerun()
 
     if st.button("Submit Proof"):
         if uploaded_proof is not None:
             st.session_state.user_data['address_proof'] = uploaded_proof.getvalue()
             st.session_state.step = 6
+            st.experimental_rerun()
         else:
             st.warning("Please upload proof of address.")
 
 def step_verification_result():
-    st.header("Step 6 of 6: Verification Result")
+    st.header("Step 6 of 6: Verification Result ✅")
 
     st.success("✅ Verification Successful!")
     st.write("**Verification Details:**")
@@ -133,6 +129,21 @@ def step_verification_result():
     if st.button("Start Over"):
         st.session_state.step = 1
         st.session_state.user_data = {}
+        st.experimental_rerun()
+
+def step_verification_failed():
+    st.header("Step 7: ❌ Verification Failed")
+    st.error("Face match score was below 75%. Verification could not be completed.")
+    st.markdown("Please try again by capturing a clearer selfie or using a valid ID document.")
+
+    if st.button("Try Again"):
+        st.session_state.step = 3  # Go back to face capture
+        st.experimental_rerun()
+
+    if st.button("Start Over"):
+        st.session_state.step = 1
+        st.session_state.user_data = {}
+        st.experimental_rerun()
 
 def main():
     if st.session_state.step == 1:
@@ -147,6 +158,8 @@ def main():
         step_address_proof_required()
     elif st.session_state.step == 6:
         step_verification_result()
+    elif st.session_state.step == 7:
+        step_verification_failed()
 
 if __name__ == "__main__":
     main()
