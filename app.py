@@ -9,14 +9,14 @@ if 'step' not in st.session_state:
 if 'user_data' not in st.session_state:
     st.session_state.user_data = {}
 
-# Helper to create PDF in-memory
+# Fixed create_pdf function
 def create_pdf(text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     pdf.multi_cell(0, 10, text)
-    pdf_output = io.BytesIO()
-    pdf.output(pdf_output)
+    pdf_bytes = pdf.output(dest='S').encode('latin1')  # <-- FIX HERE
+    pdf_output = io.BytesIO(pdf_bytes)
     pdf_output.seek(0)
     return pdf_output
 
@@ -37,7 +37,7 @@ def step_personal_info():
             'address': address
         })
         st.session_state.step = 2
-        st.rerun()
+        st.experimental_rerun()
 
 # Step 2: Upload Document
 def step_upload_document():
@@ -55,14 +55,14 @@ def step_upload_document():
     with col1:
         if st.button("Back"):
             st.session_state.step = 1
-            st.rerun()
+            st.experimental_rerun()
     with col2:
         if st.button("Continue"):
             st.session_state.user_data['document_type'] = doc_type
             if uploaded_file is not None:
                 st.session_state.user_data['document_file'] = uploaded_file.getvalue()
                 st.session_state.step = 3
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.warning("Please upload a document.")
 
@@ -86,12 +86,12 @@ def step_face_capture():
     with col1:
         if st.button("Back"):
             st.session_state.step = 2
-            st.rerun()
+            st.experimental_rerun()
     with col2:
         if st.button("Continue"):
             if 'selfie' in st.session_state.user_data:
                 st.session_state.step = 4
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.warning("Please capture a selfie before continuing.")
 
@@ -113,7 +113,7 @@ def step_verifying():
     else:
         st.session_state.step = 7  # Verification failed
 
-    st.rerun()
+    st.experimental_rerun()
 
 # Step 5: Address Proof Upload
 def step_address_proof_required():
@@ -128,13 +128,13 @@ def step_address_proof_required():
         if st.button("Start Over"):
             st.session_state.step = 1
             st.session_state.user_data = {}
-            st.rerun()
+            st.experimental_rerun()
     with col2:
         if st.button("Submit Proof"):
             if uploaded_proof is not None:
                 st.session_state.user_data['address_proof'] = uploaded_proof.getvalue()
                 st.session_state.step = 6
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.warning("Please upload proof of address.")
 
@@ -172,7 +172,6 @@ Verified ID: {st.session_state.user_data.get('document_type', '')}
 Verification Outcome: PASSED
 """
 
-    # Show generate PDFs button
     if st.button("Generate PDFs"):
         client_pdf = create_pdf(client_pdf_text)
         company_pdf = create_pdf(company_pdf_text)
@@ -193,7 +192,7 @@ Verification Outcome: PASSED
     if st.button("Start Over"):
         st.session_state.step = 1
         st.session_state.user_data = {}
-        st.rerun()
+        st.experimental_rerun()
 
 # Step 7: Verification Failed
 def step_verification_failed():
@@ -205,14 +204,14 @@ def step_verification_failed():
     with col1:
         if st.button("Try Again"):
             st.session_state.step = 3
-            st.rerun()
+            st.experimental_rerun()
     with col2:
         if st.button("Start Over"):
             st.session_state.step = 1
             st.session_state.user_data = {}
-            st.rerun()
+            st.experimental_rerun()
 
-# Step router
+# Main router
 def main():
     step = st.session_state.step
 
