@@ -14,7 +14,7 @@ def step_enter_api_key():
     if api_key:
         st.session_state.api_key = api_key
         st.session_state.step = 1
-        st.experimental_rerun()
+        st.rerun()
 
 # ---------------------------
 # Step 1: Personal Information
@@ -33,7 +33,7 @@ def step_personal_info():
             "address": address,
         }
         st.session_state.step = 2
-        st.experimental_rerun()
+        st.rerun()
 
 # ---------------------------
 # Step 2: Upload ID Document
@@ -47,7 +47,7 @@ def step_upload_document():
             st.session_state.user_data["doc_type"] = doc_type
             st.session_state.user_data["doc_file"] = doc_file.read()
             st.session_state.step = 3
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.warning("Please upload a document.")
 
@@ -61,7 +61,7 @@ def step_face_capture():
         st.session_state.user_data["selfie"] = selfie.read()
     if st.button("Continue") and "selfie" in st.session_state.user_data:
         st.session_state.step = 4
-        st.experimental_rerun()
+        st.rerun()
 
 # ---------------------------
 # Step 4: Verification (Gemini)
@@ -82,7 +82,7 @@ def step_verification():
 
     st.session_state.result = result
     st.session_state.step = 5
-    st.experimental_rerun()
+    st.rerun()
 
 # ---------------------------
 # Step 5: Results + PDF
@@ -110,7 +110,7 @@ def step_result():
     if st.button("🔄 Start Over"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.experimental_rerun()
+        st.rerun()
 
 # ---------------------------
 # Main Router
