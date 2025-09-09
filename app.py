@@ -29,20 +29,17 @@ def step_personal_info():
     address = st.text_area("Address:", st.session_state.user_data.get('address', ''))
 
     if st.button("Continue"):
-        if not st.session_state.get('already_rerun_personal', False):
-            st.session_state.user_data.update({
-                'full_name': full_name,
-                'dob': dob,
-                'id_number': id_number,
-                'address': address
-            })
-            st.session_state.pop('verification_done', None)
-            st.session_state.step = 2
-            st.session_state['already_rerun_personal'] = True
-            st.write("Personal info submitted, rerunning...")
-            st.experimental_rerun()
-    else:
-        st.session_state['already_rerun_personal'] = False
+        st.session_state.user_data.update({
+            'full_name': full_name,
+            'dob': dob,
+            'id_number': id_number,
+            'address': address
+        })
+        # Clear any rerun flags to avoid interference
+        st.session_state.pop('verification_done', None)
+        st.session_state.pop('step1_rerun_done', None)
+        st.session_state.step = 2
+        st.experimental_rerun()
 
 # Step 2: Upload Document
 def step_upload_document():
@@ -60,6 +57,7 @@ def step_upload_document():
     with col1:
         if st.button("Back"):
             st.session_state.pop('verification_done', None)
+            st.session_state.pop('step2_rerun_done', None)
             st.session_state.step = 1
             st.experimental_rerun()
     with col2:
@@ -68,6 +66,7 @@ def step_upload_document():
             if uploaded_file is not None:
                 st.session_state.user_data['document_file'] = uploaded_file.getvalue()
                 st.session_state.pop('verification_done', None)
+                st.session_state.pop('step2_rerun_done', None)
                 st.session_state.step = 3
                 st.experimental_rerun()
             else:
@@ -93,33 +92,32 @@ def step_face_capture():
     with col1:
         if st.button("Back"):
             st.session_state.pop('verification_done', None)
+            st.session_state.pop('step3_rerun_done', None)
             st.session_state.step = 2
             st.experimental_rerun()
     with col2:
         if st.button("Continue"):
             if 'selfie' in st.session_state.user_data:
-                if not st.session_state.get('already_rerun_face', False):
+                if not st.session_state.get('step3_rerun_done', False):
                     st.session_state.pop('verification_done', None)
                     st.session_state.step = 4
-                    st.session_state['already_rerun_face'] = True
-                    st.write("Selfie captured, proceeding, rerunning...")
+                    st.session_state['step3_rerun_done'] = True
                     st.experimental_rerun()
             else:
                 st.warning("Please capture a selfie before continuing.")
-        else:
-            st.session_state['already_rerun_face'] = False
 
 # Step 4: Verifying
 def step_verifying():
     st.header("Step 4 of 6: Verifying Your Identity...")
     st.write("Please wait, this may take a few seconds...")
 
-    if 'verification_done' not in st.session_state:
+    if not st.session_state.get('verification_done', False):
         time.sleep(2)
 
         face_match_score = st.session_state.user_data.get('face_match_score', 0)
         st.session_state['verification_done'] = True
 
+        # Determine verification outcome
         if face_match_score >= 75:
             if not st.session_state.user_data.get('address'):
                 st.session_state.verification_passed = False
@@ -131,8 +129,8 @@ def step_verifying():
             st.session_state.verification_passed = False
             st.session_state.step = 7
 
-        st.write("Verification done, rerunning...")
         st.experimental_rerun()
+
     else:
         st.write("Verification complete, redirecting...")
 
@@ -148,6 +146,7 @@ def step_address_proof_required():
     with col1:
         if st.button("Start Over"):
             st.session_state.pop('verification_done', None)
+            st.session_state.pop('step5_rerun_done', None)
             st.session_state.step = 1
             st.session_state.user_data = {}
             st.experimental_rerun()
@@ -156,6 +155,7 @@ def step_address_proof_required():
             if uploaded_proof is not None:
                 st.session_state.user_data['address_proof'] = uploaded_proof.getvalue()
                 st.session_state.pop('verification_done', None)
+                st.session_state.pop('step5_rerun_done', None)
                 st.session_state.step = 6
                 st.experimental_rerun()
             else:
@@ -222,15 +222,11 @@ Verification Outcome: {verification_status}
         )
 
     if st.button("Start Over"):
-        if not st.session_state.get('already_rerun_result', False):
-            st.session_state.pop('verification_done', None)
-            st.session_state.step = 1
-            st.session_state.user_data = {}
-            st.session_state['already_rerun_result'] = True
-            st.write("Restarting app, rerunning...")
-            st.experimental_rerun()
-    else:
-        st.session_state['already_rerun_result'] = False
+        st.session_state.pop('verification_done', None)
+        st.session_state.pop('step6_rerun_done', None)
+        st.session_state.step = 1
+        st.session_state.user_data = {}
+        st.experimental_rerun()
 
 # Step 7: Verification Failed due to Face Match Score
 def step_verification_failed():
@@ -242,11 +238,13 @@ def step_verification_failed():
     with col1:
         if st.button("Try Again"):
             st.session_state.pop('verification_done', None)
+            st.session_state.pop('step7_rerun_done', None)
             st.session_state.step = 3
             st.experimental_rerun()
     with col2:
         if st.button("Start Over"):
             st.session_state.pop('verification_done', None)
+            st.session_state.pop('step7_rerun_done', None)
             st.session_state.step = 1
             st.session_state.user_data = {}
             st.experimental_rerun()
