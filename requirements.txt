@@ -1,11 +1,7 @@
 streamlit
-deepface
-opencv-python-headless
-reportlab
-numpy
-Pillow
-tensorflow==2.20.0
-tf-keras
 fpdf
 face_recognition
+numpy
+Pillow
+cmake
 dlib
