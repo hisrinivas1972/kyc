@@ -9,13 +9,12 @@ if 'step' not in st.session_state:
 if 'user_data' not in st.session_state:
     st.session_state.user_data = {}
 
-# Fixed create_pdf function
 def create_pdf(text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     pdf.multi_cell(0, 10, text)
-    pdf_bytes = pdf.output(dest='S').encode('latin1')  # <-- FIX HERE
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
     pdf_output = io.BytesIO(pdf_bytes)
     pdf_output.seek(0)
     return pdf_output
@@ -99,19 +98,22 @@ def step_face_capture():
 def step_verifying():
     st.header("Step 4 of 6: Verifying Your Identity...")
     st.write("Please wait, this may take a few seconds...")
-
     time.sleep(2)
 
     face_match_score = st.session_state.user_data.get('face_match_score', 0)
     st.write(f"Simulated Face match score: {face_match_score}%")
 
+    # Determine verification outcome
     if face_match_score >= 75:
         if not st.session_state.user_data.get('address'):
+            st.session_state.verification_passed = False
             st.session_state.step = 5
         else:
+            st.session_state.verification_passed = True
             st.session_state.step = 6
     else:
-        st.session_state.step = 7  # Verification failed
+        st.session_state.verification_passed = False
+        st.session_state.step = 7
 
     st.experimental_rerun()
 
@@ -138,22 +140,31 @@ def step_address_proof_required():
             else:
                 st.warning("Please upload proof of address.")
 
-# Step 6: Verification Success with PDF download
+# Step 6: Verification Result (Passed or Failed)
 def step_verification_result():
-    st.header("Step 6 of 6: ✅ Verification Successful")
+    st.header("Step 6 of 6: Verification Result")
 
-    st.success("✅ Your identity has been successfully verified!")
+    passed = st.session_state.get('verification_passed', False)
+    face_match_passed = st.session_state.user_data.get('face_match_score', 0) >= 75
+    address_present = bool(st.session_state.user_data.get('address'))
+
+    if passed:
+        st.success("✅ Your identity has been successfully verified!")
+        verification_status = "PASSED"
+    else:
+        st.error("❌ Verification Failed.")
+        verification_status = "FAILED"
+
     st.write("**Verification Details:**")
-    st.markdown("""
-    - Name Match: ✅ Passed  
-    - Date of Birth Match: ✅ Passed  
-    - ID Number Match: ✅ Passed  
-    - Address Match: ✅ Passed  
-    - Face Match: ✅ Passed  
-    - Document Authenticity: ✅ Passed  
+    st.markdown(f"""
+    - Name Match: {'✅ Passed' if passed else '❌ Failed'}  
+    - Date of Birth Match: {'✅ Passed' if passed else '❌ Failed'}  
+    - ID Number Match: {'✅ Passed' if passed else '❌ Failed'}  
+    - Address Match: {'✅ Passed' if address_present else '❌ Failed'}  
+    - Face Match: {'✅ Passed' if face_match_passed else '❌ Failed'}  
+    - Document Authenticity: {'✅ Passed' if passed else '❌ Failed'}  
     """)
 
-    # Prepare PDF content
     client_pdf_text = f"""
 Client KYC Verification Result
 
@@ -161,7 +172,7 @@ Name: {st.session_state.user_data.get('full_name', '')}
 DOB: {st.session_state.user_data.get('dob', '')}
 ID Number: {st.session_state.user_data.get('id_number', '')}
 Address: {st.session_state.user_data.get('address', '')}
-Verification Status: PASSED
+Verification Status: {verification_status}
 """
 
     company_pdf_text = f"""
@@ -169,7 +180,7 @@ Company KYC Verification Summary
 
 Client Name: {st.session_state.user_data.get('full_name', '')}
 Verified ID: {st.session_state.user_data.get('document_type', '')}
-Verification Outcome: PASSED
+Verification Outcome: {verification_status}
 """
 
     if st.button("Generate PDFs"):
@@ -194,7 +205,7 @@ Verification Outcome: PASSED
         st.session_state.user_data = {}
         st.experimental_rerun()
 
-# Step 7: Verification Failed
+# Step 7: Verification Failed due to Face Match Score
 def step_verification_failed():
     st.header("❌ Verification Failed")
     st.error("Face match score was below 75%. Verification could not be completed.")
@@ -213,6 +224,9 @@ def step_verification_failed():
 
 # Main router
 def main():
+    # Debug info for current step - remove in prod
+    st.write(f"--- DEBUG: Current step = {st.session_state.step} ---")
+
     step = st.session_state.step
 
     if step == 1:
