@@ -59,12 +59,20 @@ def step_face_capture():
     if selfie is not None:
         st.session_state.user_data['selfie'] = selfie.getvalue()
 
+    # Add a slider to simulate face match percentage
+    face_match_score = st.slider("Simulated Face Match Score (%)", 0, 100, 
+                                 st.session_state.user_data.get('face_match_score', 80))
+    st.session_state.user_data['face_match_score'] = face_match_score
+
     if st.button("Back"):
         st.session_state.step = 2
 
     if st.button("Continue"):
         if 'selfie' in st.session_state.user_data:
-            st.session_state.step = 4
+            if face_match_score >= 75:
+                st.session_state.step = 4
+            else:
+                st.warning("Face match below 75%. Verification failed.")
         else:
             st.warning("Please capture a selfie before continuing.")
 
@@ -75,11 +83,21 @@ def step_verifying():
     import time
     time.sleep(2)  # Simulate processing time
 
-    # Simulate address extraction failure if address is missing
-    if not st.session_state.user_data.get('address'):
-        st.session_state.step = 5
+    # Use simulated face match score
+    face_match_score = st.session_state.user_data.get('face_match_score', 0)
+
+    st.write(f"Simulated Face match score: {face_match_score}%")
+
+    if face_match_score >= 75:
+        # If address missing, go to step 5 else success
+        if not st.session_state.user_data.get('address'):
+            st.session_state.step = 5
+        else:
+            st.session_state.step = 6
     else:
-        st.session_state.step = 6
+        st.error("Face match below 75%. Verification failed.")
+        if st.button("Try Again"):
+            st.session_state.step = 3
 
 def step_address_proof_required():
     st.header("Step 5 of 6: Proof of Address Required")
