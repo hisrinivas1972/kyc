@@ -1,3 +1,5 @@
 streamlit
-fpdf
 google-generativeai
+fpdf
+face_recognition
+opencv-python
