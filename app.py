@@ -1,5 +1,6 @@
 import streamlit as st
-from PIL import Image
+from fpdf import FPDF
+import io
 import time
 
 # Initialize session state
@@ -7,6 +8,17 @@ if 'step' not in st.session_state:
     st.session_state.step = 1
 if 'user_data' not in st.session_state:
     st.session_state.user_data = {}
+
+# Helper to create PDF in-memory
+def create_pdf(text):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, text)
+    pdf_output = io.BytesIO()
+    pdf.output(pdf_output)
+    pdf_output.seek(0)
+    return pdf_output
 
 # Step 1: Personal Info
 def step_personal_info():
@@ -126,7 +138,7 @@ def step_address_proof_required():
             else:
                 st.warning("Please upload proof of address.")
 
-# Step 6: Verification Success
+# Step 6: Verification Success with PDF download
 def step_verification_result():
     st.header("Step 6 of 6: ✅ Verification Successful")
 
@@ -140,6 +152,43 @@ def step_verification_result():
     - Face Match: ✅ Passed  
     - Document Authenticity: ✅ Passed  
     """)
+
+    # Prepare PDF content
+    client_pdf_text = f"""
+Client KYC Verification Result
+
+Name: {st.session_state.user_data.get('full_name', '')}
+DOB: {st.session_state.user_data.get('dob', '')}
+ID Number: {st.session_state.user_data.get('id_number', '')}
+Address: {st.session_state.user_data.get('address', '')}
+Verification Status: PASSED
+"""
+
+    company_pdf_text = f"""
+Company KYC Verification Summary
+
+Client Name: {st.session_state.user_data.get('full_name', '')}
+Verified ID: {st.session_state.user_data.get('document_type', '')}
+Verification Outcome: PASSED
+"""
+
+    # Show generate PDFs button
+    if st.button("Generate PDFs"):
+        client_pdf = create_pdf(client_pdf_text)
+        company_pdf = create_pdf(company_pdf_text)
+
+        st.download_button(
+            label="Download PDF for Client",
+            data=client_pdf,
+            file_name="client_kyc_result.pdf",
+            mime="application/pdf"
+        )
+        st.download_button(
+            label="Download PDF for Company",
+            data=company_pdf,
+            file_name="company_kyc_summary.pdf",
+            mime="application/pdf"
+        )
 
     if st.button("Start Over"):
         st.session_state.step = 1
@@ -163,7 +212,7 @@ def step_verification_failed():
             st.session_state.user_data = {}
             st.rerun()
 
-# Step Router
+# Step router
 def main():
     step = st.session_state.step
 
@@ -182,6 +231,5 @@ def main():
     elif step == 7:
         step_verification_failed()
 
-# Run app
 if __name__ == "__main__":
     main()
