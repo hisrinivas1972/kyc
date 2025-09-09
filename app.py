@@ -25,7 +25,7 @@ def step_personal_info():
             'address': address
         })
         st.session_state.step = 2
-        st.experimental_rerun()
+        st.rerun()
 
 # Step 2: Upload Document
 def step_upload_document():
@@ -43,18 +43,18 @@ def step_upload_document():
     with col1:
         if st.button("Back"):
             st.session_state.step = 1
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button("Continue"):
             st.session_state.user_data['document_type'] = doc_type
             if uploaded_file is not None:
                 st.session_state.user_data['document_file'] = uploaded_file.getvalue()
                 st.session_state.step = 3
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning("Please upload a document.")
 
-# Step 3: Face Capture with simulated face match
+# Step 3: Face Capture
 def step_face_capture():
     st.header("Step 3 of 6: Face Capture")
 
@@ -74,21 +74,21 @@ def step_face_capture():
     with col1:
         if st.button("Back"):
             st.session_state.step = 2
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button("Continue"):
             if 'selfie' in st.session_state.user_data:
                 st.session_state.step = 4
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning("Please capture a selfie before continuing.")
 
-# Step 4: Verifying Logic
+# Step 4: Verifying
 def step_verifying():
     st.header("Step 4 of 6: Verifying Your Identity...")
     st.write("Please wait, this may take a few seconds...")
 
-    time.sleep(2)  # Simulated processing delay
+    time.sleep(2)
 
     face_match_score = st.session_state.user_data.get('face_match_score', 0)
     st.write(f"Simulated Face match score: {face_match_score}%")
@@ -101,9 +101,9 @@ def step_verifying():
     else:
         st.session_state.step = 7  # Verification failed
 
-    st.experimental_rerun()
+    st.rerun()
 
-# Step 5: Upload Proof of Address
+# Step 5: Address Proof Upload
 def step_address_proof_required():
     st.header("Step 5 of 6: Proof of Address Required")
     st.write("Address information could not be extracted. Please upload proof of address.")
@@ -116,13 +116,13 @@ def step_address_proof_required():
         if st.button("Start Over"):
             st.session_state.step = 1
             st.session_state.user_data = {}
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button("Submit Proof"):
             if uploaded_proof is not None:
                 st.session_state.user_data['address_proof'] = uploaded_proof.getvalue()
                 st.session_state.step = 6
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning("Please upload proof of address.")
 
@@ -144,7 +144,7 @@ def step_verification_result():
     if st.button("Start Over"):
         st.session_state.step = 1
         st.session_state.user_data = {}
-        st.experimental_rerun()
+        st.rerun()
 
 # Step 7: Verification Failed
 def step_verification_failed():
@@ -155,15 +155,15 @@ def step_verification_failed():
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Try Again"):
-            st.session_state.step = 3  # Go back to face capture
-            st.experimental_rerun()
+            st.session_state.step = 3
+            st.rerun()
     with col2:
         if st.button("Start Over"):
             st.session_state.step = 1
             st.session_state.user_data = {}
-            st.experimental_rerun()
+            st.rerun()
 
-# Main Step Router
+# Step Router
 def main():
     step = st.session_state.step
 
@@ -182,6 +182,6 @@ def main():
     elif step == 7:
         step_verification_failed()
 
-# Run the app
+# Run app
 if __name__ == "__main__":
     main()
