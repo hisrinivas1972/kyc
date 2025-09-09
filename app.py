@@ -29,23 +29,29 @@ def step_personal_info():
     address = st.text_area("Address:", st.session_state.user_data.get('address', ''))
 
     if st.button("Continue"):
-        st.session_state.user_data.update({
-            'full_name': full_name,
-            'dob': dob,
-            'id_number': id_number,
-            'address': address
-        })
-        st.session_state.pop('verification_done', None)
-        st.session_state.step = 2
-        st.experimental_rerun()
+        if not st.session_state.get('already_rerun_personal', False):
+            st.session_state.user_data.update({
+                'full_name': full_name,
+                'dob': dob,
+                'id_number': id_number,
+                'address': address
+            })
+            st.session_state.pop('verification_done', None)
+            st.session_state.step = 2
+            st.session_state['already_rerun_personal'] = True
+            st.write("Personal info submitted, rerunning...")
+            st.experimental_rerun()
+    else:
+        st.session_state['already_rerun_personal'] = False
 
 # Step 2: Upload Document
 def step_upload_document():
     st.header("Step 2 of 6: Upload ID Document")
 
-    doc_types = ['Driver\'s License', 'Passport', 'National ID']
-    current_doc = st.session_state.user_data.get('document_type', 'Driver\'s License')
-    doc_type = st.radio("Document Type:", doc_types, index=doc_types.index(current_doc))
+    doc_type = st.radio("Document Type:", ['Driver\'s License', 'Passport', 'National ID'],
+                        index=['Driver\'s License', 'Passport', 'National ID'].index(
+                            st.session_state.user_data.get('document_type', 'Driver\'s License')
+                        ))
 
     uploaded_file = st.file_uploader("Upload Document (png, jpg, jpeg, pdf):", 
                                      type=['png', 'jpg', 'jpeg', 'pdf'])
@@ -58,8 +64,8 @@ def step_upload_document():
             st.experimental_rerun()
     with col2:
         if st.button("Continue"):
+            st.session_state.user_data['document_type'] = doc_type
             if uploaded_file is not None:
-                st.session_state.user_data['document_type'] = doc_type
                 st.session_state.user_data['document_file'] = uploaded_file.getvalue()
                 st.session_state.pop('verification_done', None)
                 st.session_state.step = 3
@@ -92,11 +98,16 @@ def step_face_capture():
     with col2:
         if st.button("Continue"):
             if 'selfie' in st.session_state.user_data:
-                st.session_state.pop('verification_done', None)
-                st.session_state.step = 4
-                st.experimental_rerun()
+                if not st.session_state.get('already_rerun_face', False):
+                    st.session_state.pop('verification_done', None)
+                    st.session_state.step = 4
+                    st.session_state['already_rerun_face'] = True
+                    st.write("Selfie captured, proceeding, rerunning...")
+                    st.experimental_rerun()
             else:
                 st.warning("Please capture a selfie before continuing.")
+        else:
+            st.session_state['already_rerun_face'] = False
 
 # Step 4: Verifying
 def step_verifying():
@@ -104,26 +115,24 @@ def step_verifying():
     st.write("Please wait, this may take a few seconds...")
 
     if 'verification_done' not in st.session_state:
-        time.sleep(2)  # Simulated verification delay
+        time.sleep(2)
 
         face_match_score = st.session_state.user_data.get('face_match_score', 0)
         st.session_state['verification_done'] = True
 
         if face_match_score >= 75:
             if not st.session_state.user_data.get('address'):
-                new_step = 5
+                st.session_state.verification_passed = False
+                st.session_state.step = 5
             else:
-                new_step = 6
-            passed = True
+                st.session_state.verification_passed = True
+                st.session_state.step = 6
         else:
-            new_step = 7
-            passed = False
+            st.session_state.verification_passed = False
+            st.session_state.step = 7
 
-        st.session_state.verification_passed = passed
-
-        if st.session_state.step != new_step:
-            st.session_state.step = new_step
-            st.experimental_rerun()
+        st.write("Verification done, rerunning...")
+        st.experimental_rerun()
     else:
         st.write("Verification complete, redirecting...")
 
@@ -213,10 +222,15 @@ Verification Outcome: {verification_status}
         )
 
     if st.button("Start Over"):
-        st.session_state.pop('verification_done', None)
-        st.session_state.step = 1
-        st.session_state.user_data = {}
-        st.experimental_rerun()
+        if not st.session_state.get('already_rerun_result', False):
+            st.session_state.pop('verification_done', None)
+            st.session_state.step = 1
+            st.session_state.user_data = {}
+            st.session_state['already_rerun_result'] = True
+            st.write("Restarting app, rerunning...")
+            st.experimental_rerun()
+    else:
+        st.session_state['already_rerun_result'] = False
 
 # Step 7: Verification Failed due to Face Match Score
 def step_verification_failed():
