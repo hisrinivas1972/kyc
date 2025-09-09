@@ -8,5 +8,4 @@ tensorflow==2.20.0
 tf-keras
 fpdf
 face_recognition
-cmake
 dlib
