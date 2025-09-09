@@ -57,7 +57,7 @@ def step_enter_api_key():
         if api_key_input.strip():
             st.session_state.api_key = api_key_input.strip()
             st.session_state.step = 1
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.warning("API key cannot be empty. Please enter a valid API key.")
 
@@ -79,7 +79,7 @@ def step_personal_info():
                 'address': address
             })
             st.session_state.step = 2
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.warning("Please fill all fields before continuing.")
 
@@ -100,14 +100,14 @@ def step_upload_document():
     with col1:
         if st.button("Back"):
             st.session_state.step = 1
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button("Continue"):
             if uploaded_file is not None:
                 st.session_state.user_data['document_type'] = doc_type
                 st.session_state.user_data['document_file'] = uploaded_file.read()
                 st.session_state.step = 3
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning("Please upload a document before continuing.")
 
@@ -123,12 +123,12 @@ def step_face_capture():
 
     if st.button("Back"):
         st.session_state.step = 2
-        st.experimental_rerun()
+        st.rerun()
 
     if st.button("Continue"):
         if 'selfie' in st.session_state.user_data:
             st.session_state.step = 4
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.warning("Please capture a selfie before continuing.")
 
@@ -149,18 +149,18 @@ def step_verifying():
             if st.button("Start Over"):
                 st.session_state.step = 0
                 st.session_state.user_data = {}
-                st.experimental_rerun()
+                st.rerun()
             return
 
         result = call_gemini_api(api_key, id_doc, selfie, user_info)
         st.session_state.verification_result = result
         st.session_state.step = 5
-        st.experimental_rerun()
+        st.rerun()
     else:
         st.write("Verification complete, redirecting...")
         time.sleep(1)
         st.session_state.step = 5
-        st.experimental_rerun()
+        st.rerun()
 
 # ----------- Step 5: Show Result -------------
 
@@ -228,7 +228,7 @@ Verification Outcome: {verification_status}
         st.session_state.step = 0
         st.session_state.user_data = {}
         st.session_state.pop('verification_result', None)
-        st.experimental_rerun()
+        st.rerun()
 
 # ----------- Main Router -------------
 
