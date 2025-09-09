@@ -8,6 +8,8 @@ if 'step' not in st.session_state:
     st.session_state.step = 1
 if 'user_data' not in st.session_state:
     st.session_state.user_data = {}
+if 'verification_passed' not in st.session_state:
+    st.session_state.verification_passed = False
 
 def create_pdf(text):
     pdf = FPDF()
@@ -19,6 +21,7 @@ def create_pdf(text):
     pdf_output.seek(0)
     return pdf_output
 
+# Step 1: Personal Info
 def step_personal_info():
     st.header("Step 1 of 6: Personal Information")
 
@@ -27,7 +30,9 @@ def step_personal_info():
     id_number = st.text_input("ID Number:", st.session_state.user_data.get('id_number', ''))
     address = st.text_area("Address:", st.session_state.user_data.get('address', ''))
 
-    if st.button("Continue"):
+    continue_clicked = st.button("Continue")
+
+    if continue_clicked:
         st.session_state.user_data.update({
             'full_name': full_name,
             'dob': dob,
@@ -35,63 +40,77 @@ def step_personal_info():
             'address': address
         })
         st.session_state.step = 2
-        st.experimental_rerun()  # Only here, immediately after button press
+        st.experimental_rerun()
 
+# Step 2: Upload Document
 def step_upload_document():
     st.header("Step 2 of 6: Upload ID Document")
 
     doc_types = ['Driver\'s License', 'Passport', 'National ID']
-    current_doc_type = st.session_state.user_data.get('document_type', 'Driver\'s License')
-    doc_type = st.radio("Document Type:", doc_types, index=doc_types.index(current_doc_type))
+    default_doc_type = st.session_state.user_data.get('document_type', 'Driver\'s License')
+    doc_type = st.radio("Document Type:", doc_types, index=doc_types.index(default_doc_type))
 
-    uploaded_file = st.file_uploader("Upload Document (png, jpg, jpeg, pdf):", type=['png', 'jpg', 'jpeg', 'pdf'])
+    uploaded_file = st.file_uploader("Upload Document (png, jpg, jpeg, pdf):", 
+                                     type=['png', 'jpg', 'jpeg', 'pdf'])
 
     col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Back"):
-            st.session_state.step = 1
-            st.experimental_rerun()
-    with col2:
-        if st.button("Continue"):
-            if uploaded_file is not None:
-                st.session_state.user_data['document_type'] = doc_type
-                st.session_state.user_data['document_file'] = uploaded_file.getvalue()
-                st.session_state.step = 3
-                st.experimental_rerun()
-            else:
-                st.warning("Please upload a document.")
+    back_clicked = col1.button("Back")
+    continue_clicked = col2.button("Continue")
 
+    if back_clicked:
+        st.session_state.step = 1
+        st.experimental_rerun()
+
+    if continue_clicked:
+        st.session_state.user_data['document_type'] = doc_type
+        if uploaded_file is not None:
+            st.session_state.user_data['document_file'] = uploaded_file.getvalue()
+            st.session_state.step = 3
+            st.experimental_rerun()
+        else:
+            st.warning("Please upload a document.")
+
+# Step 3: Face Capture
 def step_face_capture():
     st.header("Step 3 of 6: Face Capture")
 
     selfie = st.camera_input("Take a clear selfie")
+
     if selfie is not None:
         st.session_state.user_data['selfie'] = selfie.getvalue()
 
-    if 'selfie' in st.session_state.user_data:
+    if st.session_state.user_data.get('selfie'):
         st.image(st.session_state.user_data['selfie'], caption="Captured selfie", width=200)
 
-    face_match_score = st.slider("Simulated Face Match Score (%)", 0, 100, st.session_state.user_data.get('face_match_score', 80))
+    face_match_score = st.slider(
+        "Simulated Face Match Score (%)",
+        0,
+        100,
+        st.session_state.user_data.get('face_match_score', 80)
+    )
     st.session_state.user_data['face_match_score'] = face_match_score
 
     col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Back"):
-            st.session_state.step = 2
-            st.experimental_rerun()
-    with col2:
-        if st.button("Continue"):
-            if 'selfie' in st.session_state.user_data:
-                st.session_state.step = 4
-                st.experimental_rerun()
-            else:
-                st.warning("Please capture a selfie before continuing.")
+    back_clicked = col1.button("Back")
+    continue_clicked = col2.button("Continue")
 
+    if back_clicked:
+        st.session_state.step = 2
+        st.experimental_rerun()
+
+    if continue_clicked:
+        if 'selfie' in st.session_state.user_data:
+            st.session_state.step = 4
+            st.experimental_rerun()
+        else:
+            st.warning("Please capture a selfie before continuing.")
+
+# Step 4: Verifying
 def step_verifying():
     st.header("Step 4 of 6: Verifying Your Identity...")
+    st.write("Please wait, this may take a few seconds...")
 
-    with st.spinner("Verifying, please wait..."):
-        time.sleep(2)
+    time.sleep(2)
 
     face_match_score = st.session_state.user_data.get('face_match_score', 0)
     st.write(f"Simulated Face match score: {face_match_score}%")
@@ -108,30 +127,34 @@ def step_verifying():
         st.session_state.verification_passed = False
         st.session_state.step = 7
 
-    # Important: rerun only once after setting the step
     st.experimental_rerun()
 
+# Step 5: Address Proof Upload
 def step_address_proof_required():
     st.header("Step 5 of 6: Proof of Address Required")
     st.write("Address information could not be extracted. Please upload proof of address.")
 
-    uploaded_proof = st.file_uploader("Upload Proof of Address (png, jpg, jpeg, pdf):", type=['png', 'jpg', 'jpeg', 'pdf'])
+    uploaded_proof = st.file_uploader("Upload Proof of Address (png, jpg, jpeg, pdf):", 
+                                      type=['png', 'jpg', 'jpeg', 'pdf'])
 
     col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Start Over"):
-            st.session_state.step = 1
-            st.session_state.user_data = {}
-            st.experimental_rerun()
-    with col2:
-        if st.button("Submit Proof"):
-            if uploaded_proof is not None:
-                st.session_state.user_data['address_proof'] = uploaded_proof.getvalue()
-                st.session_state.step = 6
-                st.experimental_rerun()
-            else:
-                st.warning("Please upload proof of address.")
+    start_over_clicked = col1.button("Start Over")
+    submit_clicked = col2.button("Submit Proof")
 
+    if start_over_clicked:
+        st.session_state.step = 1
+        st.session_state.user_data = {}
+        st.experimental_rerun()
+
+    if submit_clicked:
+        if uploaded_proof is not None:
+            st.session_state.user_data['address_proof'] = uploaded_proof.getvalue()
+            st.session_state.step = 6
+            st.experimental_rerun()
+        else:
+            st.warning("Please upload proof of address.")
+
+# Step 6: Verification Result (Passed or Failed)
 def step_verification_result():
     st.header("Step 6 of 6: Verification Result")
 
@@ -174,7 +197,8 @@ Verified ID: {st.session_state.user_data.get('document_type', '')}
 Verification Outcome: {verification_status}
 """
 
-    if st.button("Generate PDFs"):
+    generate_pdfs_clicked = st.button("Generate PDFs")
+    if generate_pdfs_clicked:
         client_pdf = create_pdf(client_pdf_text)
         company_pdf = create_pdf(company_pdf_text)
 
@@ -191,32 +215,37 @@ Verification Outcome: {verification_status}
             mime="application/pdf"
         )
 
-    if st.button("Start Over"):
+    start_over_clicked = st.button("Start Over")
+    if start_over_clicked:
         st.session_state.step = 1
         st.session_state.user_data = {}
         st.experimental_rerun()
 
+# Step 7: Verification Failed due to Face Match Score
 def step_verification_failed():
     st.header("❌ Verification Failed")
     st.error("Face match score was below 75%. Verification could not be completed.")
     st.markdown("Please try again by capturing a clearer selfie or using a valid ID document.")
 
     col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Try Again"):
-            st.session_state.step = 3
-            st.experimental_rerun()
-    with col2:
-        if st.button("Start Over"):
-            st.session_state.step = 1
-            st.session_state.user_data = {}
-            st.experimental_rerun()
+    try_again_clicked = col1.button("Try Again")
+    start_over_clicked = col2.button("Start Over")
 
+    if try_again_clicked:
+        st.session_state.step = 3
+        st.experimental_rerun()
+
+    if start_over_clicked:
+        st.session_state.step = 1
+        st.session_state.user_data = {}
+        st.experimental_rerun()
+
+# Main router
 def main():
-    step = st.session_state.step
+    # Debug info for current step - remove or comment out in production
+    st.write(f"--- DEBUG: Current step = {st.session_state.step} ---")
 
-    # Debug info — remove or comment out in production
-    st.write(f"--- DEBUG: Current step = {step} ---")
+    step = st.session_state.step
 
     if step == 1:
         step_personal_info()
