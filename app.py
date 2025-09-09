@@ -2,20 +2,11 @@ import streamlit as st
 from fpdf import FPDF
 import io
 import time
+import requests  # For Gemini API call (replace with your SDK if needed)
+import base64
 
-# -----------------------
-# Session state defaults
-# -----------------------
-if 'step' not in st.session_state:
-    st.session_state.step = 0  # Start at Step 0: API Key input
-if 'user_data' not in st.session_state:
-    st.session_state.user_data = {}
-if 'api_key' not in st.session_state:
-    st.session_state.api_key = ''
+# ------------- Utils ----------------
 
-# ---------------
-# PDF generation
-# ---------------
 def create_pdf(text):
     pdf = FPDF()
     pdf.add_page()
@@ -26,52 +17,81 @@ def create_pdf(text):
     pdf_output.seek(0)
     return pdf_output
 
-# ----------------
-# Step 0: API key
-# ----------------
+def call_gemini_api(api_key, id_doc_bytes, selfie_bytes, user_info):
+    """
+    Replace this with your actual Gemini API call.
+    This simulates sending images and data and getting a JSON response.
+    """
+
+    # Example payload — adjust per your API requirements
+    # For demo, we simulate a response:
+    time.sleep(2)  # Simulate API latency
+
+    # Fake logic for face match:
+    # In real case, send id_doc_bytes and selfie_bytes to Gemini
+    # Here we just simulate a 80% face match if images are present
+    face_match_score = 80
+
+    # Simulate verifying other data matches (you’d parse real response)
+    verification_passed = True if face_match_score >= 75 else False
+
+    response = {
+        "face_match_score": face_match_score,
+        "verification_passed": verification_passed,
+        "details": {
+            "name_match": True,
+            "dob_match": True,
+            "id_number_match": True,
+            "address_match": bool(user_info.get('address')),
+            "document_authenticity": True
+        }
+    }
+    return response
+
+# ----------- Step 0: Enter API Key -------------
+
 def step_enter_api_key():
-    st.header("🔐 Enter Your Gemini API Key")
-    api_key_input = st.text_input("Please enter your Google Gemini API Key:", type="password")
-    if st.button("Continue"):
+    st.header("Enter Gemini API Key to proceed")
+    api_key_input = st.text_input("API Key", type="password")
+    if st.button("Submit API Key"):
         if api_key_input.strip():
             st.session_state.api_key = api_key_input.strip()
             st.session_state.step = 1
-            st.rerun()
+            st.experimental_rerun()
         else:
-            st.warning("API key cannot be empty. Please enter a valid key.")
+            st.warning("API key cannot be empty. Please enter a valid API key.")
 
-# -------------------
-# Step 1: Personal Info
-# -------------------
+# ----------- Step 1: Personal Info -------------
+
 def step_personal_info():
-    st.header("Step 1 of 6: Personal Information")
-
+    st.header("Step 1 of 5: Personal Information")
     full_name = st.text_input("Full Name:", st.session_state.user_data.get('full_name', ''))
     dob = st.text_input("DOB (dd-mm-yyyy):", st.session_state.user_data.get('dob', ''))
     id_number = st.text_input("ID Number:", st.session_state.user_data.get('id_number', ''))
     address = st.text_area("Address:", st.session_state.user_data.get('address', ''))
 
     if st.button("Continue"):
-        st.session_state.user_data.update({
-            'full_name': full_name,
-            'dob': dob,
-            'id_number': id_number,
-            'address': address
-        })
-        if 'verification_done' in st.session_state:
-            del st.session_state['verification_done']
-        st.session_state.step = 2
-        st.rerun()
+        if full_name and dob and id_number and address:
+            st.session_state.user_data.update({
+                'full_name': full_name,
+                'dob': dob,
+                'id_number': id_number,
+                'address': address
+            })
+            st.session_state.step = 2
+            st.experimental_rerun()
+        else:
+            st.warning("Please fill all fields before continuing.")
 
-# ----------------------
-# Step 2: Upload Document
-# ----------------------
+# ----------- Step 2: Upload Document -------------
+
 def step_upload_document():
-    st.header("Step 2 of 6: Upload ID Document")
+    st.header("Step 2 of 5: Upload ID Document")
 
-    doc_types = ['Driver\'s License', 'Passport', 'National ID']
-    doc_type = st.radio("Document Type:", doc_types,
-                        index=doc_types.index(st.session_state.user_data.get('document_type', 'Driver\'s License')))
+    doc_type = st.radio("Document Type:", ['Driver\'s License', 'Passport', 'National ID'],
+                        index=['Driver\'s License', 'Passport', 'National ID'].index(
+                            st.session_state.user_data.get('document_type', 'Driver\'s License')
+                        ))
 
     uploaded_file = st.file_uploader("Upload Document (png, jpg, jpeg, pdf):",
                                      type=['png', 'jpg', 'jpeg', 'pdf'])
@@ -79,147 +99,94 @@ def step_upload_document():
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Back"):
-            if 'verification_done' in st.session_state:
-                del st.session_state['verification_done']
             st.session_state.step = 1
-            st.rerun()
+            st.experimental_rerun()
     with col2:
         if st.button("Continue"):
-            st.session_state.user_data['document_type'] = doc_type
             if uploaded_file is not None:
-                st.session_state.user_data['document_file'] = uploaded_file.getvalue()
-                if 'verification_done' in st.session_state:
-                    del st.session_state['verification_done']
+                st.session_state.user_data['document_type'] = doc_type
+                st.session_state.user_data['document_file'] = uploaded_file.read()
                 st.session_state.step = 3
-                st.rerun()
+                st.experimental_rerun()
             else:
-                st.warning("Please upload a document.")
+                st.warning("Please upload a document before continuing.")
 
-# -----------------
-# Step 3: Face Capture
-# -----------------
+# ----------- Step 3: Face Capture -------------
+
 def step_face_capture():
-    st.header("Step 3 of 6: Face Capture")
+    st.header("Step 3 of 5: Capture Selfie")
 
     selfie = st.camera_input("Take a clear selfie")
-
     if selfie is not None:
-        st.session_state.user_data['selfie'] = selfie.getvalue()
+        st.session_state.user_data['selfie'] = selfie.read()
+        st.image(selfie, caption="Captured selfie", width=200)
 
-    if st.session_state.user_data.get('selfie'):
-        st.image(st.session_state.user_data['selfie'], caption="Captured selfie", width=200)
+    if st.button("Back"):
+        st.session_state.step = 2
+        st.experimental_rerun()
 
-    face_match_score = st.slider("Simulated Face Match Score (%)", 0, 100,
-                                 st.session_state.user_data.get('face_match_score', 80))
-    st.session_state.user_data['face_match_score'] = face_match_score
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Back"):
-            if 'verification_done' in st.session_state:
-                del st.session_state['verification_done']
-            st.session_state.step = 2
-            st.rerun()
-    with col2:
-        if st.button("Continue"):
-            if 'selfie' in st.session_state.user_data:
-                if 'verification_done' in st.session_state:
-                    del st.session_state['verification_done']
-                st.session_state.step = 4
-                st.rerun()
-            else:
-                st.warning("Please capture a selfie before continuing.")
-
-# -----------------
-# Step 4: Verifying (Dummy Gemini Call)
-# -----------------
-def step_verifying():
-    st.header("Step 4 of 6: Verifying Your Identity...")
-    st.write("Please wait, this may take a few seconds...")
-
-    if 'verification_done' not in st.session_state:
-        # Simulate delay
-        time.sleep(2)
-
-        # Dummy check using face_match_score
-        face_match_score = st.session_state.user_data.get('face_match_score', 0)
-
-        # Here is where you'd call Gemini API, passing st.session_state.api_key
-        # For example:
-        # result = verify_identity_with_gemini(prompt, id_image, selfie_image, st.session_state.api_key)
-
-        # For this example, fake verification result:
-        st.session_state['verification_done'] = True
-
-        if face_match_score >= 75:
-            if not st.session_state.user_data.get('address'):
-                st.session_state.verification_passed = False
-                st.session_state.step = 5
-            else:
-                st.session_state.verification_passed = True
-                st.session_state.step = 6
+    if st.button("Continue"):
+        if 'selfie' in st.session_state.user_data:
+            st.session_state.step = 4
+            st.experimental_rerun()
         else:
-            st.session_state.verification_passed = False
-            st.session_state.step = 7
+            st.warning("Please capture a selfie before continuing.")
 
-        st.rerun()
+# ----------- Step 4: Call Gemini & Verify -------------
+
+def step_verifying():
+    st.header("Step 4 of 5: Verifying your identity...")
+    st.write("Please wait, this may take a few seconds.")
+
+    if 'verification_result' not in st.session_state:
+        api_key = st.session_state.api_key
+        id_doc = st.session_state.user_data.get('document_file')
+        selfie = st.session_state.user_data.get('selfie')
+        user_info = st.session_state.user_data
+
+        if not id_doc or not selfie:
+            st.error("Missing document or selfie data. Please start over.")
+            if st.button("Start Over"):
+                st.session_state.step = 0
+                st.session_state.user_data = {}
+                st.experimental_rerun()
+            return
+
+        result = call_gemini_api(api_key, id_doc, selfie, user_info)
+        st.session_state.verification_result = result
+        st.session_state.step = 5
+        st.experimental_rerun()
     else:
         st.write("Verification complete, redirecting...")
+        time.sleep(1)
+        st.session_state.step = 5
+        st.experimental_rerun()
 
-# --------------------------
-# Step 5: Proof of Address Required
-# --------------------------
-def step_address_proof_required():
-    st.header("Step 5 of 6: Proof of Address Required")
-    st.write("Address information could not be extracted. Please upload proof of address.")
+# ----------- Step 5: Show Result -------------
 
-    uploaded_proof = st.file_uploader("Upload Proof of Address (png, jpg, jpeg, pdf):",
-                                      type=['png', 'jpg', 'jpeg', 'pdf'])
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Start Over"):
-            if 'verification_done' in st.session_state:
-                del st.session_state['verification_done']
-            st.session_state.step = 1
-            st.session_state.user_data = {}
-            st.rerun()
-    with col2:
-        if st.button("Submit Proof"):
-            if uploaded_proof is not None:
-                st.session_state.user_data['address_proof'] = uploaded_proof.getvalue()
-                if 'verification_done' in st.session_state:
-                    del st.session_state['verification_done']
-                st.session_state.step = 6
-                st.rerun()
-            else:
-                st.warning("Please upload proof of address.")
-
-# -----------------
-# Step 6: Verification Result
-# -----------------
 def step_verification_result():
-    st.header("Step 6 of 6: Verification Result")
+    st.header("Step 5 of 5: Verification Result")
 
-    passed = st.session_state.get('verification_passed', False)
-    face_match_passed = st.session_state.user_data.get('face_match_score', 0) >= 75
-    address_present = bool(st.session_state.user_data.get('address'))
+    result = st.session_state.get('verification_result', {})
+    passed = result.get('verification_passed', False)
+    face_match_score = result.get('face_match_score', 0)
+    details = result.get('details', {})
 
     if passed:
         st.success("✅ Your identity has been successfully verified!")
         verification_status = "PASSED"
     else:
-        st.error("❌ Verification Failed.")
+        st.error("❌ Verification failed.")
         verification_status = "FAILED"
 
     st.write("**Verification Details:**")
     st.markdown(f"""
-    - Name Match: {'✅ Passed' if passed else '❌ Failed'}  
-    - Date of Birth Match: {'✅ Passed' if passed else '❌ Failed'}  
-    - ID Number Match: {'✅ Passed' if passed else '❌ Failed'}  
-    - Address Match: {'✅ Passed' if address_present else '❌ Failed'}  
-    - Face Match: {'✅ Passed' if face_match_passed else '❌ Failed'}  
-    - Document Authenticity: {'✅ Passed' if passed else '❌ Failed'}  
+    - Name Match: {'✅' if details.get('name_match') else '❌'}  
+    - Date of Birth Match: {'✅' if details.get('dob_match') else '❌'}  
+    - ID Number Match: {'✅' if details.get('id_number_match') else '❌'}  
+    - Address Match: {'✅' if details.get('address_match') else '❌'}  
+    - Face Match Score: {face_match_score}% {'✅' if face_match_score >= 75 else '❌'}  
+    - Document Authenticity: {'✅' if details.get('document_authenticity') else '❌'}  
     """)
 
     client_pdf_text = f"""
@@ -258,46 +225,19 @@ Verification Outcome: {verification_status}
         )
 
     if st.button("Start Over"):
-        if 'verification_done' in st.session_state:
-            del st.session_state['verification_done']
-        st.session_state.step = 1
+        st.session_state.step = 0
         st.session_state.user_data = {}
-        st.rerun()
+        st.session_state.pop('verification_result', None)
+        st.experimental_rerun()
 
-# -------------------
-# Step 7: Verification Failed
-# -------------------
-def step_verification_failed():
-    st.header("❌ Verification Failed")
-    st.error("Face match score was below 75%. Verification could not be completed.")
-    st.markdown("Please try again by capturing a clearer selfie or using a valid ID document.")
+# ----------- Main Router -------------
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Try Again"):
-            if 'verification_done' in st.session_state:
-                del st.session_state['verification_done']
-            st.session_state.step = 3
-            st.rerun()
-    with col2:
-        if st.button("Start Over"):
-            if 'verification_done' in st.session_state:
-                del st.session_state['verification_done']
-            st.session_state.step = 1
-            st.session_state.user_data = {}
-            st.rerun()
-
-# -------------------
-# Main router
-# -------------------
 def main():
-    st.sidebar.title("KYC App Controls")
-    if st.session_state.api_key:
-        st.sidebar.success("🔐 Gemini API Key provided")
-    else:
-        st.sidebar.warning("⚠️ Gemini API Key missing")
-
-    st.write(f"--- DEBUG: Current step = {st.session_state.step} ---")
+    # Initialize session state
+    if 'step' not in st.session_state:
+        st.session_state.step = 0  # Start at API key input
+    if 'user_data' not in st.session_state:
+        st.session_state.user_data = {}
 
     step = st.session_state.step
 
@@ -312,11 +252,7 @@ def main():
     elif step == 4:
         step_verifying()
     elif step == 5:
-        step_address_proof_required()
-    elif step == 6:
         step_verification_result()
-    elif step == 7:
-        step_verification_failed()
 
 if __name__ == "__main__":
     main()
