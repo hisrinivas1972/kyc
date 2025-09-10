@@ -2,17 +2,24 @@
 
 import google.generativeai as genai
 import json
+import re
 
 def configure_gemini(api_key):
     genai.configure(api_key=api_key)
 
-def verify_identity_with_gemini(api_key, id_image_bytes, selfie_bytes, input_data):
-    configure_gemini(api_key)
+def extract_json(text):
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if match:
+        return json.loads(match.group(0))
+    else:
+        raise ValueError("No valid JSON object found in Gemini response.")
 
+def verify_identity_with_gemini(api_key, id_image_bytes, selfie_bytes, input_data, id_mime_type="image/jpeg"):
+    configure_gemini(api_key)
     model = genai.GenerativeModel(model_name="gemini-pro-vision")
 
     prompt = f"""
-    Compare the two images above and validate them against this user info:
+    Compare the two images and validate them against this user info:
     Full Name: {input_data["full_name"]}
     Date of Birth: {input_data["dob"]}
     ID Number: {input_data["id_number"]}
@@ -33,15 +40,13 @@ def verify_identity_with_gemini(api_key, id_image_bytes, selfie_bytes, input_dat
 
     try:
         response = model.generate_content([
-            {"mime_type": "image/jpeg", "data": id_image_bytes},
+            {"mime_type": id_mime_type, "data": id_image_bytes},
             {"mime_type": "image/jpeg", "data": selfie_bytes},
             prompt
         ])
 
         result_text = response.text.strip()
-
-        # Try to extract JSON from the response text
-        response_data = json.loads(result_text)
+        response_data = extract_json(result_text)
 
         return {
             "status": response_data.get("verdict", "UNKNOWN"),
@@ -50,8 +55,14 @@ def verify_identity_with_gemini(api_key, id_image_bytes, selfie_bytes, input_dat
             "name_match": response_data.get("name_match"),
             "dob_match": response_data.get("dob_match"),
             "address_match": response_data.get("address_match"),
-            "details": response_data
+            "details": {
+                **input_data,
+                **response_data
+            }
         }
 
     except Exception as e:
-        return {"status": "ERROR", "message": f"Error in processing Gemini response: {str(e)}"}
+        return {
+            "status": "ERROR",
+            "message": f"Error processing Gemini response: {str(e)}"
+        }
