@@ -7,10 +7,10 @@ def create_pdf(result, recipient="client"):
     pdf = FPDF()
     pdf.add_page()
 
-    # Set title and font
+    # Title
     pdf.set_font("Arial", "B", 16)
     pdf.cell(200, 10, f"{recipient.capitalize()} KYC Verification Result", ln=True, align="C")
-    pdf.ln(10)  # Line break
+    pdf.ln(10)
 
     # Client Details
     pdf.set_font("Arial", size=12)
@@ -20,23 +20,17 @@ def create_pdf(result, recipient="client"):
     pdf.cell(200, 10, f"Address: {result['details'].get('address', 'N/A')}", ln=True)
     pdf.ln(10)
 
-    # Verification Details
-    pdf.set_font("Arial", size=12)
+    # Verification
     pdf.cell(200, 10, f"Verification Status: {result['status']}", ln=True)
-    pdf.cell(200, 10, f"Face Match Score: {result['face_match_score']}%", ln=True)
-    pdf.cell(200, 10, f"Document Verified: {'✅' if result['document_verified'] else '❌'}", ln=True)
-    pdf.cell(200, 10, f"Name Match: {'✅' if result['name_match'] else '❌'}", ln=True)
-    pdf.cell(200, 10, f"DOB Match: {'✅' if result['dob_match'] else '❌'}", ln=True)
-    pdf.cell(200, 10, f"Address Match: {'✅' if result['address_match'] else '❌'}", ln=True)
+    pdf.cell(200, 10, f"Face Match Score: {result.get('face_match_score', 0)}%", ln=True)
+    pdf.cell(200, 10, f"Document Verified: {'✅' if result.get('document_verified') else '❌'}", ln=True)
+    pdf.cell(200, 10, f"Name Match: {'✅' if result.get('name_match') else '❌'}", ln=True)
+    pdf.cell(200, 10, f"DOB Match: {'✅' if result.get('dob_match') else '❌'}", ln=True)
+    pdf.cell(200, 10, f"Address Match: {'✅' if result.get('address_match') else '❌'}", ln=True)
 
-    # Company-specific info
     if recipient == "company":
         pdf.ln(10)
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, f"Client Name: {result['details'].get('full_name', 'N/A')}", ln=True)
         pdf.cell(200, 10, f"Verified ID Type: {result['details'].get('doc_type', 'N/A')}", ln=True)
         pdf.cell(200, 10, f"Verification Outcome: {result['status']}", ln=True)
 
-    # Output PDF to byte format
-    pdf_output = pdf.output(dest='S').encode('latin1')
-    return pdf_output
+    return pdf.output(dest='S').encode('latin1')
