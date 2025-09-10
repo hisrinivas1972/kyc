@@ -1,4 +1,4 @@
-# app.py
+# kyc/app.py
 
 import streamlit as st
 from services.gemini_service import verify_identity_with_gemini
