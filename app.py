@@ -1,17 +1,15 @@
 # kyc/app.py
 
 import streamlit as st
-from deepface import DeepFace
+from services.face_verification_service import verify_identity_with_deepface
 from utils.pdf_generator import create_pdf
-import os
 
 # ---------------------------
-# Step 0: Gemini API Key Entry (Now optional, removed Gemini usage)
+# Step 0: API Key Entry (Optional)
 # ---------------------------
 def step_enter_api_key():
-    st.title("🔐 Enter API Key (Optional)")
-    st.info("Since we're using DeepFace locally, API key is optional.")
-    if st.button("Continue"):
+    st.title("🔐 Start KYC Verification")
+    if st.button("Start"):
         st.session_state.step = 1
         st.rerun()
 
@@ -25,9 +23,6 @@ def step_personal_info():
     id_number = st.text_input("ID Number")
     address = st.text_area("Address")
     if st.button("Continue"):
-        if not full_name or not id_number or not address:
-            st.warning("Please fill all required fields.")
-            return
         st.session_state.user_data = {
             "full_name": full_name,
             "dob": str(dob),
@@ -43,7 +38,7 @@ def step_personal_info():
 def step_upload_document():
     st.title("Step 2: Upload ID Document")
     doc_type = st.selectbox("Document Type", ["Passport", "Driver's License", "National ID"])
-    doc_file = st.file_uploader("Upload your ID (jpg, png, pdf)", type=["jpg", "jpeg", "png", "pdf"])
+    doc_file = st.file_uploader("Upload your ID (jpg, png, pdf)", type=["jpg", "jpeg", "png"])
     if st.button("Continue"):
         if doc_file:
             st.session_state.user_data["doc_type"] = doc_type
@@ -61,10 +56,7 @@ def step_face_capture():
     selfie = st.camera_input("Take a clear selfie")
     if selfie:
         st.session_state.user_data["selfie"] = selfie.read()
-    if st.button("Continue"):
-        if "selfie" not in st.session_state.user_data:
-            st.warning("Please capture a selfie before continuing.")
-            return
+    if st.button("Continue") and "selfie" in st.session_state.user_data:
         st.session_state.step = 4
         st.rerun()
 
@@ -72,53 +64,18 @@ def step_face_capture():
 # Step 4: Verification (DeepFace)
 # ---------------------------
 def step_verification():
-    st.title("Step 4: AI Verification in Progress...")
+    st.title("Step 4: Verifying Identity...")
 
     user_data = st.session_state.user_data
 
-    # Write images to temporary files
-    id_path = "temp_id.jpg"
-    selfie_path = "temp_selfie.jpg"
+    with st.spinner("Verifying with AI..."):
+        result = verify_identity_with_deepface(
+            id_image_bytes=user_data["doc_file"],
+            selfie_bytes=user_data["selfie"],
+            input_data=user_data
+        )
 
-    with open(id_path, "wb") as f:
-        f.write(user_data["doc_file"])
-
-    with open(selfie_path, "wb") as f:
-        f.write(user_data["selfie"])
-
-    with st.spinner("Processing with DeepFace..."):
-        try:
-            result = DeepFace.verify(img1_path=selfie_path, img2_path=id_path, enforce_detection=False)
-            verified = result.get("verified", False)
-            distance = result.get("distance", 1.0)
-
-            threshold = 0.4  # typical threshold for Facenet model
-            status = "APPROVED" if verified else "REJECTED"
-
-            verification_result = {
-                "status": status,
-                "face_match_score": round((1 - distance) * 100, 2),
-                "document_verified": True,  # Simplified assumption
-                "name_match": True,
-                "dob_match": True,
-                "address_match": True,
-                "details": user_data
-            }
-
-        except Exception as e:
-            verification_result = {
-                "status": "ERROR",
-                "message": f"Verification failed: {str(e)}",
-                "details": user_data
-            }
-
-    # Clean up temp images
-    if os.path.exists(id_path):
-        os.remove(id_path)
-    if os.path.exists(selfie_path):
-        os.remove(selfie_path)
-
-    st.session_state.result = verification_result
+    st.session_state.result = result
     st.session_state.step = 5
     st.rerun()
 
@@ -133,8 +90,6 @@ def step_result():
 
     if passed:
         st.success("✅ Identity Verified Successfully!")
-    elif result["status"] == "ERROR":
-        st.error(f"❌ Error during verification: {result.get('message')}")
     else:
         st.error("❌ Verification Failed.")
 
@@ -160,7 +115,7 @@ def main():
         st.session_state.step = 0
 
     steps = {
-        0: step_enter_api_key,  # API key optional now, just skip
+        0: step_enter_api_key,
         1: step_personal_info,
         2: step_upload_document,
         3: step_face_capture,
