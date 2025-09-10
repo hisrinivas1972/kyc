@@ -1,5 +1,5 @@
-streamlit
-deepface
-fpdf
-tensorflow
-opencv-python-headless
+streamlit==1.24.1
+deepface==0.0.79
+fpdf==1.7.2
+tensorflow==2.13.0
+opencv-python-headless==4.8.0.74
