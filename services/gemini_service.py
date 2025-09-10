@@ -1,4 +1,4 @@
-# gemini_service.py
+# kyc/services/gemini_service.py
 
 import google.generativeai as genai
 import json
