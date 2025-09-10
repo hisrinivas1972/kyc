@@ -60,16 +60,15 @@ def step_face_capture():
     if st.button("Continue") and "selfie" in st.session_state.user_data:
         st.session_state.step = 4
         st.rerun()
-
 # ---------------------------
 # Step 4: Verification (DeepFace)
 # ---------------------------
 def step_verification():
-    st.title("Step 4: Verifying Identity...")
+    st.title("Step 4: AI Verification in Progress...")
 
     user_data = st.session_state.user_data
 
-    with st.spinner("Verifying with AI..."):
+    with st.spinner("Analyzing images with DeepFace..."):
         result = verify_identity_with_deepface(
             id_image_bytes=user_data["doc_file"],
             selfie_bytes=user_data["selfie"],
@@ -79,6 +78,7 @@ def step_verification():
     st.session_state.result = result
     st.session_state.step = 5
     st.rerun()
+
 
 # ---------------------------
 # Step 5: Results + PDF
