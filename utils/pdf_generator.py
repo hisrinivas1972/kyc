@@ -18,15 +18,15 @@ def create_pdf(result, recipient="client"):
     pdf.ln(10)
 
     pdf.cell(200, 10, f"Verification Status: {result['status']}", ln=True)
-    pdf.cell(200, 10, f"Face Match Score: {result.get('face_match_score', 0)}%", ln=True)
-    pdf.cell(200, 10, f"Document Verified: {'✅' if result.get('document_verified') else '❌'}", ln=True)
-    pdf.cell(200, 10, f"Name Match: {'✅' if result.get('name_match') else '❌'}", ln=True)
-    pdf.cell(200, 10, f"DOB Match: {'✅' if result.get('dob_match') else '❌'}", ln=True)
-    pdf.cell(200, 10, f"Address Match: {'✅' if result.get('address_match') else '❌'}", ln=True)
+    pdf.cell(200, 10, f"Face Match Score: {result['face_match_score']}%", ln=True)
+    pdf.cell(200, 10, f"Document Verified: {'✅' if result['document_verified'] else '❌'}", ln=True)
+    pdf.cell(200, 10, f"Name Match: {'✅' if result['name_match'] else '❌'}", ln=True)
+    pdf.cell(200, 10, f"DOB Match: {'✅' if result['dob_match'] else '❌'}", ln=True)
+    pdf.cell(200, 10, f"Address Match: {'✅' if result['address_match'] else '❌'}", ln=True)
 
     if recipient == "company":
         pdf.ln(10)
+        pdf.cell(200, 10, f"Client Name: {result['details'].get('full_name', 'N/A')}", ln=True)
         pdf.cell(200, 10, f"Verified ID Type: {result['details'].get('doc_type', 'N/A')}", ln=True)
-        pdf.cell(200, 10, f"Verification Outcome: {result['status']}", ln=True)
 
     return pdf.output(dest='S').encode('latin1')
