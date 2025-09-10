@@ -3,16 +3,13 @@
 from fpdf import FPDF
 
 def create_pdf(result, recipient="client"):
-    """Generate a PDF for the client or company with the verification result."""
     pdf = FPDF()
     pdf.add_page()
 
-    # Title
     pdf.set_font("Arial", "B", 16)
     pdf.cell(200, 10, f"{recipient.capitalize()} KYC Verification Result", ln=True, align="C")
     pdf.ln(10)
 
-    # Client Details
     pdf.set_font("Arial", size=12)
     pdf.cell(200, 10, f"Full Name: {result['details'].get('full_name', 'N/A')}", ln=True)
     pdf.cell(200, 10, f"DOB: {result['details'].get('dob', 'N/A')}", ln=True)
@@ -20,7 +17,6 @@ def create_pdf(result, recipient="client"):
     pdf.cell(200, 10, f"Address: {result['details'].get('address', 'N/A')}", ln=True)
     pdf.ln(10)
 
-    # Verification
     pdf.cell(200, 10, f"Verification Status: {result['status']}", ln=True)
     pdf.cell(200, 10, f"Face Match Score: {result.get('face_match_score', 0)}%", ln=True)
     pdf.cell(200, 10, f"Document Verified: {'✅' if result.get('document_verified') else '❌'}", ln=True)
